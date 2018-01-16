@@ -1,9 +1,9 @@
 #
 # Tobii controller for PsychoPy
-# 
+#
 # author: Hiroyuki Sogo
 # Distributed under the terms of the GNU General Public License v3 (GPLv3).
-# 
+#
 
 from __future__ import division
 from __future__ import absolute_import
@@ -51,7 +51,7 @@ def cm2deg(cm, monitor, correctFlat=False):
     Bug-fixed version of psychopy.tools.monitorunittools.cm2deg
     (PsychoPy version<=1.85.1).
     """
-    
+
     if not isinstance(monitor, monitors.Monitor):
         msg = ("cm2deg requires a monitors.Monitor object as the second "
                "argument but received %s")
@@ -71,7 +71,7 @@ def pix2deg(pixels, monitor, correctFlat=False):
     Bug-fixed version of psychopy.tools.monitorunittools.pix2deg
     (PsychoPy version<=1.85.1).
     """
-    
+
     scrWidthCm = monitor.getWidth()
     scrSizePix = monitor.getSizePix()
     if scrSizePix is None:
@@ -89,7 +89,7 @@ class tobii_controller:
     Tobii controller for PsychoPy
     tobii_research package is required to use this class.
     """
-    
+
     eyetracker = None
     calibration = None
     eyetracker_id = None
@@ -106,18 +106,18 @@ class tobii_controller:
     def __init__(self, win, id=0):
         """
         Initialize tobii_controller object.
-        
+
         :param win: PsychoPy Window object.
         :param int id: ID of Tobii unit to connect with.
             Default value is 0.
         """
-        
+
         self.eyetracker_id = id
         self.win = win
-        
+
         self.calibration_target_dot_size = default_calibration_target_dot_size[self.win.units]
         self.calibration_target_disc_size = default_calibration_target_disc_size[self.win.units]
-        self.calibration_target_dot = psychopy.visual.Circle(self.win, 
+        self.calibration_target_dot = psychopy.visual.Circle(self.win,
             radius=self.calibration_target_dot_size, fillColor='white',
             lineColor=None,lineWidth=1, autoLog=False)
         self.calibration_target_disc = psychopy.visual.Circle(self.win,
@@ -127,41 +127,41 @@ class tobii_controller:
         if self.win.units == 'norm': # fix oval
             self.calibration_target_dot.setSize([float(self.win.size[1])/self.win.size[0], 1.0])
             self.calibration_target_disc.setSize([float(self.win.size[1])/self.win.size[0], 1.0])
-        
+
         eyetrackers = tobii_research.find_all_eyetrackers()
 
         if len(eyetrackers)==0:
             raise RuntimeError('No Tobii eyetrackers')
-        
+
         try:
             self.eyetracker = eyetrackers[self.eyetracker_id]
         except:
             raise ValueError(
                 'Invalid eyetracker ID {}\n({} eyetrackers found)'.format(
                     self.eyetracker_id, len(eyetrackers)))
-        
+
         self.calibration = tobii_research.ScreenBasedCalibration(self.eyetracker)
 
 
     def show_status(self, text_color='white', enable_mouse=False):
         """
         Draw eyetracker status on the screen.
-        
+
         :param text_color: Color of message text. Default value is 'white'
         :param bool enable_mouse: If True, mouse operation is enabled.
             Default value is False.
         """
-        
+
         if self.eyetracker is None:
             raise RuntimeError('Eyetracker is not found.')
-        
+
         if enable_mouse:
             mouse = psychopy.event.Mouse(visible=False, win=self.win)
-        
+
         self.gaze_data_status = None
         self.eyetracker.subscribe_to(tobii_research.EYETRACKER_GAZE_DATA,
                                      self.on_gaze_data_status)
-        
+
         msg = psychopy.visual.TextStim(self.win, color=text_color,
             height=0.02, pos=(0,-0.35), units='height', autoLog=False)
         bgrect = psychopy.visual.Rect(self.win,
@@ -172,7 +172,7 @@ class tobii_controller:
             autoLog=False)
         reye = psychopy.visual.Circle(self.win, size=0.05, units='height',
             lineColor=None, fillColor='red', autoLog=False)
-        
+
         b_show_status = True
         while b_show_status:
             bgrect.draw()
@@ -189,17 +189,17 @@ class tobii_controller:
                     reye.setPos(((rp[0]-0.5)/2,(rp[1]-0.5)/2))
                     reye.setRadius((1-rp[2])/2)
                     reye.draw()
-            
+
             for key in psychopy.event.getKeys():
                 if key == 'escape' or key == 'space':
                     b_show_status = False
-            
+
             if enable_mouse and mouse.getPressed()[0]:
                 b_show_status = False
-            
+
             msg.draw()
             self.win.flip()
-        
+
         self.eyetracker.unsubscribe_from(tobii_research.EYETRACKER_GAZE_DATA)
 
 
@@ -207,10 +207,10 @@ class tobii_controller:
         """
         Callback function used by
         :func:`~psychopy_tobii_controller.tobii_controller.show_status`
-        
+
         Usually, users don't have to call this method.
         """
-        
+
         lp = gaze_data.left_eye.gaze_origin.position_in_track_box_coordinates
         lv = gaze_data.left_eye.gaze_origin.validity
         rp = gaze_data.right_eye.gaze_origin.position_in_track_box_coordinates
@@ -223,7 +223,7 @@ class tobii_controller:
             text_color='white', enable_mouse=False):
         """
         Run calibration.
-        
+
         :param calibration_points: List of position of calibration points.
         :param float move_duration: Duration of animation of calibration target.
             Unit is second.  Default value is 1.5.
@@ -239,20 +239,20 @@ class tobii_controller:
         :param bool enable_mouse: If True, mouse operation is enabled.
             Default value is False.
         """
-        
+
         if self.eyetracker is None:
             raise RuntimeError('Eyetracker is not found.')
-        
+
         if not (2 <= len(calibration_points) <= 9):
             raise ValueError('Calibration points must be 2~9')
-        
-        
+
+
         if enable_mouse:
             mouse = psychopy.event.Mouse(visible=False, win=self.win)
-        
+
         img = Image.new('RGBA',tuple(self.win.size))
         img_draw = ImageDraw.Draw(img)
-        
+
         result_img = psychopy.visual.SimpleImageStim(self.win, img, autoLog=False)
         result_msg = psychopy.visual.TextStim(self.win, pos=(0,-self.win.size[1]/4),
             color=text_color, units='pix', autoLog=False)
@@ -268,17 +268,17 @@ class tobii_controller:
         self.move_duration = move_duration
         self.original_calibration_points = calibration_points[:]
         self.retry_points = list(range(len(self.original_calibration_points))) # set all points
-        
+
         in_calibration_loop = True
         while in_calibration_loop:
             self.calibration_points = []
             for i in range(len(self.original_calibration_points)):
                 if i in self.retry_points:
                     self.calibration_points.append(self.original_calibration_points[i])
-            
+
             if shuffle:
                 np.random.shuffle(self.calibration_points)
-            
+
             if start_key is not None or enable_mouse:
                 waitkey = True
                 if start_key is not None:
@@ -292,21 +292,21 @@ class tobii_controller:
                     for key in psychopy.event.getKeys():
                         if key==start_key:
                            waitkey = False
-                    
+
                     if enable_mouse and mouse.getPressed()[0]:
                         waitkey = False
-                    
+
                     result_msg.draw()
                     self.win.flip()
             else:
                 self.win.flip()
-            
+
             self.update_calibration()
-            
+
             calibration_result = self.calibration.compute_and_apply()
-            
+
             self.win.flip()
-            
+
             img_draw.rectangle(((0,0),tuple(self.win.size)),fill=(0,0,0,0))
             if calibration_result.status == tobii_research.CALIBRATION_STATUS_FAILURE:
                 #computeCalibration failed.
@@ -334,7 +334,7 @@ class tobii_controller:
             else:
                 result_msg.setText('Accept/Retry: {}\nSelect recalibration points: 0-9 key\nAbort: esc'.format(decision_key))
             result_img.setImage(img)
-            
+
             waitkey = True
             self.retry_points = []
             if enable_mouse:
@@ -380,7 +380,7 @@ class tobii_controller:
                         remove_marker.draw()
                 result_msg.draw()
                 self.win.flip()
-        
+
             if key == decision_key:
                 if len(self.retry_points) == 0:
                     retval = 'accept'
@@ -394,7 +394,7 @@ class tobii_controller:
                 in_calibration_loop = False
             else:
                 raise RuntimeError('Calibration: Invalid key')
-                
+
             if enable_mouse:
                 mouse.setVisible(False)
 
@@ -411,10 +411,10 @@ class tobii_controller:
         """
         Callback function used by
         :func:`~psychopy_tobii_controller.tobii_controller.run_calibration`
-        
+
         Usually, users don't have to call this method.
         """
-        
+
         if cood=='PsychoPy':
             self.calibration.collect_data(*self.get_tobii_pos(p))
         elif cood =='Tobii':
@@ -428,16 +428,16 @@ class tobii_controller:
         Updating calibration target and correcting calibration data.
         This method is called by
         :func:`~psychopy_tobii_controller.tobii_controller.run_calibration`
-        
+
         Usually, users don't have to call this method.
         """
-        
+
         clock = psychopy.core.Clock()
         for point_index in range(len(self.calibration_points)):
             x, y = self.get_tobii_pos(self.calibration_points[point_index])
             self.calibration_target_dot.setPos(self.calibration_points[point_index])
             self.calibration_target_disc.setPos(self.calibration_points[point_index])
-            
+
             clock.reset()
             current_time = clock.getTime()
             while current_time < self.move_duration:
@@ -456,10 +456,10 @@ class tobii_controller:
     def set_custom_calibration(self, func):
         """
         Set custom calibration function.
-        
+
         :param func: custom calibration function.
         """
-        
+
         self.update_calibration = types.MethodType(func, self, tobii_controller)
 
 
@@ -467,7 +467,7 @@ class tobii_controller:
         """
         Revert calibration function to default one.
         """
-        
+
         self.update_calibration = self.update_calibration_default
 
 
@@ -475,22 +475,22 @@ class tobii_controller:
         """
         Get current key mapping for selecting calibration points as a dict object.
         """
-        
+
         return self.key_index_dict.copy()
 
 
     def set_calibration_keymap(self, keymap):
         """
         Set key mapping for selecting calibration points.
-        
+
         :param dict keymap: Dict object that holds calibration keymap.
             Key of the dict object correspond to PsychoPy key name.
             Value is index of the list of calibration points.
-            For example, if you have only two calibration points and 
+            For example, if you have only two calibration points and
             want to select these points by 'z' and 'x' key, set keymap
             {'z':0, 'x':1}.
         """
-        
+
         self.key_index_dict = keymap.copy()
 
 
@@ -498,14 +498,14 @@ class tobii_controller:
         """
         Set default key mapping for selecting calibration points.
         """
-        
+
         self.key_index_dict = default_key_index_dict.copy()
 
 
     def set_calibration_param(self, param_dict):
         """
         Set calibration parameters.
-        
+
         :param dict param_dict: Dict object that holds calibration parameters.
             Use :func:`~psychopy_tobii_controller.tobii_controller.get_calibration_param`
             to get dict object.
@@ -535,7 +535,7 @@ class tobii_controller:
         - 'disc_line_width': line width of the surrounding disc of calibration target
         - 'text_color': color of text
         """
-        
+
         param_dict = {'dot_size':self.calibration_target_dot_size,
                       'dot_line_color':self.calibration_target_dot.lineColor,
                       'dot_fill_color':self.calibration_target_dot.fillColor,
@@ -551,7 +551,7 @@ class tobii_controller:
         """
         Start recording.
         """
-        
+
         self.gaze_data = []
         self.event_data = []
         self.recording = True
@@ -562,7 +562,7 @@ class tobii_controller:
         """
         Stop recording.
         """
-        
+
         self.eyetracker.unsubscribe_from(tobii_research.EYETRACKER_GAZE_DATA)
         self.recording = False
         self.flush_data()
@@ -574,20 +574,43 @@ class tobii_controller:
         """
         Callback function used by
         :func:`~psychopy_tobii_controller.tobii_controller.subscribe`
-        
+
         Usually, users don't have to call this method.
         """
-        
+
         t = gaze_data.system_time_stamp
+        td = gaze_data.device_time_stamp
         lx = gaze_data.left_eye.gaze_point.position_on_display_area[0]
         ly = gaze_data.left_eye.gaze_point.position_on_display_area[1]
         lp = gaze_data.left_eye.pupil.diameter
+        lpv = gaze_data.left_eye.pupil.validity
         lv = gaze_data.left_eye.gaze_point.validity
+        lux = gaze_data.left_eye.gaze_point.position_in_user_coordinates[0]
+        luy = gaze_data.left_eye.gaze_point.position_in_user_coordinates[1]
+        luz = gaze_data.left_eye.gaze_point.position_in_user_coordinates[2]
+        lov = gaze_data.left_eye.gaze_origin.validity
+        loux = gaze_data.left_eye.gaze_origin.position_in_user_coordinates[0]
+        louy = gaze_data.left_eye.gaze_origin.position_in_user_coordinates[1]
+        louz = gaze_data.left_eye.gaze_origin.position_in_user_coordinates[2]
+        lotx = gaze_data.left_eye.gaze_origin.position_in_track_box_coordinates[0]
+        loty = gaze_data.left_eye.gaze_origin.position_in_track_box_coordinates[1]
+        lotz = gaze_data.left_eye.gaze_origin.position_in_track_box_coordinates[2]
         rx = gaze_data.right_eye.gaze_point.position_on_display_area[0]
         ry = gaze_data.right_eye.gaze_point.position_on_display_area[1]
         rp = gaze_data.right_eye.pupil.diameter
+        rpv = gaze_data.right_eye.pupil.validity
         rv = gaze_data.right_eye.gaze_point.validity
-        self.gaze_data.append((t,lx,ly,lp,lv,rx,ry,rp,rv))
+        rux = gaze_data.right_eye.gaze_point.position_in_user_coordinates[0]
+        ruy = gaze_data.right_eye.gaze_point.position_in_user_coordinates[1]
+        ruz = gaze_data.right_eye.gaze_point.position_in_user_coordinates[2]
+        rov = gaze_data.right_eye.gaze_origin.validity
+        roux = gaze_data.right_eye.gaze_origin.position_in_user_coordinates[0]
+        rouy = gaze_data.right_eye.gaze_origin.position_in_user_coordinates[1]
+        rouz = gaze_data.right_eye.gaze_origin.position_in_user_coordinates[2]
+        rotx = gaze_data.right_eye.gaze_origin.position_in_track_box_coordinates[0]
+        roty = gaze_data.right_eye.gaze_origin.position_in_track_box_coordinates[1]
+        rotz = gaze_data.right_eye.gaze_origin.position_in_track_box_coordinates[2]
+        self.gaze_data.append((t,lx,ly,lp,lv,rx,ry,rp,rv,td,lpv,lux,luy,luz,lov,loux,louy,louz,lotx,loty,lotz,rpv,rux,ruy,ruz,rov,roux,rouy,rouz,rotx,roty,rotz))
 
 
     def get_current_gaze_position(self):
@@ -596,7 +619,7 @@ class tobii_controller:
         (left_x, left_y, right_x, right_y).
         Values are numpy.nan if Tobii fails to get gaze position.
         """
-        
+
         if len(self.gaze_data)==0:
             return (np.nan, np.nan, np.nan, np.nan)
         else:
@@ -611,7 +634,7 @@ class tobii_controller:
         (left, right).
         Values are numpy.nan if Tobii fails to get pupil size.
         """
-        
+
         if len(self.gaze_data)==0:
             return (None,None)
         else:
@@ -622,16 +645,16 @@ class tobii_controller:
     def open_datafile(self, filename, embed_events=False):
         """
         Open data file.
-        
+
         :param str filename: Name of data file to be opened.
-        :param bool embed_events: If True, event data is 
-            embeded in gaze data.  Otherwise, event data is 
+        :param bool embed_events: If True, event data is
+            embeded in gaze data.  Otherwise, event data is
             separately output after gaze data.
         """
-        
+
         if self.datafile is not None:
             self.close_datafile()
-        
+
         self.embed_events = embed_events
         self.datafile = open(filename,'w')
         self.datafile.write('Recording date:\t'+datetime.datetime.now().strftime('%Y/%m/%d')+'\n')
@@ -647,47 +670,47 @@ class tobii_controller:
         """
         Write data to the data file and close the data file.
         """
-        
+
         if self.datafile != None:
             self.flush_data()
             self.datafile.close()
-        
+
         self.datafile = None
 
 
     def record_event(self,event):
         """
         Record events with timestamp.
-        
+
         Note: This method works only during recording.
-        
+
         :param str event: Any string.
         """
         if not self.recording:
             return
-        
+
         self.event_data.append((tobii_research.get_system_time_stamp(), event))
 
 
     def flush_data(self):
         """
         Write data to the data file.
-        
+
         Note: This method do nothing during recording.
         """
-        
+
         if self.datafile == None:
             warnings.warn('data file is not set.')
             return
-        
+
         if len(self.gaze_data)==0:
             return
-        
+
         if self.recording:
             return
-        
+
         self.datafile.write('Session Start\n')
-        
+
         if self.embed_events:
             self.datafile.write('\t'.join(['TimeStamp',
                                            'GazePointXLeft',
@@ -700,6 +723,34 @@ class tobii_controller:
                                            'ValidityRight',
                                            'GazePointX',
                                            'GazePointY',
+                                           'ComputerTimestamp'
+                                           'EyeTrackerTimestamp',
+                                           'OriginalGazePointXLeft',
+                                           'OriginalGazePointYLeft',
+                                           'OriginalGazePointXRight',
+                                           'OriginalGazePointYRight',
+                                           'ValidityPupilLeft',
+                                           'GazePointUserCoordsXLeft',
+                                           'GazePointUserCoordsYLeft',
+                                           'GazePointUserCoordsZLeft',
+                                           'GazeOriginValidityLeft',
+                                           'GazeOriginUserCoordsXLeft',
+                                           'GazeOriginUserCoordsYLeft',
+                                           'GazeOriginUserCoordsZLeft',
+                                           'GazeOriginTrackboxCoordsXLeft',
+                                           'GazeOriginTrackboxCoordsYLeft',
+                                           'GazeOriginTrackboxCoordsZLeft',
+                                           'ValidityPupilRight',
+                                           'GazePointUserCoordsXRight',
+                                           'GazePointUserCoordsYRight',
+                                           'GazePointUserCoordsZRight',
+                                           'GazeOriginValidityRight',
+                                           'GazeOriginUserCoordsXRight',
+                                           'GazeOriginUserCoordsYRight',
+                                           'GazeOriginUserCoordsZRight',
+                                           'GazeOriginTrackboxCoordsXRight',
+                                           'GazeOriginTrackboxCoordsYRight',
+                                           'GazeOriginTrackboxCoordsZRight',
                                            'Event'])+'\n')
         else:
             self.datafile.write('\t'.join(['TimeStamp',
@@ -712,54 +763,97 @@ class tobii_controller:
                                            'PupilRight',
                                            'ValidityRight',
                                            'GazePointX',
-                                           'GazePointY'])+'\n')
+                                           'GazePointY',
+                                           'ComputerTimestamp'
+                                           'EyeTrackerTimestamp',
+                                           'OriginalGazePointXLeft',
+                                           'OriginalGazePointYLeft',
+                                           'OriginalGazePointXRight',
+                                           'OriginalGazePointYRight',
+                                           'ValidityPupilLeft',
+                                           'GazePointUserCoordsXLeft',
+                                           'GazePointUserCoordsYLeft',
+                                           'GazePointUserCoordsZLeft',
+                                           'GazeOriginValidityLeft',
+                                           'GazeOriginUserCoordsXLeft',
+                                           'GazeOriginUserCoordsYLeft',
+                                           'GazeOriginUserCoordsZLeft',
+                                           'GazeOriginTrackboxCoordsXLeft',
+                                           'GazeOriginTrackboxCoordsYLeft',
+                                           'GazeOriginTrackboxCoordsZLeft',
+                                           'ValidityPupilRight',
+                                           'GazePointUserCoordsXRight',
+                                           'GazePointUserCoordsYRight',
+                                           'GazePointUserCoordsZRight',
+                                           'GazeOriginValidityRight',
+                                           'GazeOriginUserCoordsXRight',
+                                           'GazeOriginUserCoordsYRight',
+                                           'GazeOriginUserCoordsZRight',
+                                           'GazeOriginTrackboxCoordsXRight',
+                                           'GazeOriginTrackboxCoordsYRight',
+                                           'GazeOriginTrackboxCoordsZRight'])+'\n')
 
-        format_string = '%.1f\t%.4f\t%.4f\t%.4f\t%d\t%.4f\t%.4f\t%.4f\t%d\t%.4f\t%.4f'
-        
+        format_string = '%.4f\t'*38 + '%.4f'
+
         timestamp_start = self.gaze_data[0][0]
         num_output_events = 0
-        
+
         if self.embed_events:
             for i in range(len(self.gaze_data)):
-                if num_output_events < len(self.event_data) and self.event_data[num_output_events][0] < self.gaze_data[i][0]:
+                if num_output_events < len(self.event_data) and self.event_data[num_output_events][0] <= self.gaze_data[i][0]:
                     event_t = self.event_data[num_output_events][0]
                     event_text = self.event_data[num_output_events][1]
-                    
-                    if i>0:
-                        output_data = self.convert_tobii_record(
-                            self.interpolate_gaze_data(self.gaze_data[i-1], self.gaze_data[i], event_t),
-                            timestamp_start)
-                    else:
-                        output_data = ((event_t-timestamp_start)/1000.0, np.nan, np.nan, np.nan, 0,
-                                       np.nan, np.nan, np.nan, 0, np.nan, np.nan)
-                    
-                    self.datafile.write(format_string % output_data)
-                    self.datafile.write('\t%s\n' % (event_text))
 
-                    num_output_events += 1
-                
-                self.datafile.write(format_string % self.convert_tobii_record(self.gaze_data[i], timestamp_start))
-                self.datafile.write('\t\n')
+                    # Deviating from original script here!!
+                    # If we interpolate the data, then we are adding a new data point,
+                    # but what if we are in the middle of a saccade? Adding a new data point
+                    # might change the velocity calculations. It seems better to just mark
+                    # the data at the next available sample from the eye tracker. Could also
+                    # output the actual event markers at the end of the file with the actual
+                    # timestamps for completeness.
+
+                    # I also think there is a bug here in original code if there are multiple event timestamps that
+                    # precede the actual gaze data, the above if statement will only run once for i == 0
+                    # inserting a while loop to dump events until start of gaze data
+
+                    if i>0:
+                        output_data = self.convert_tobii_record(self.gaze_data[i], timestamp_start)
+                        self.datafile.write(format_string % output_data)
+                        self.datafile.write('\t%s\n' % (event_text))
+                        num_output_events += 1
+                    else:
+                        while num_output_events < len(self.event_data) and self.event_data[num_output_events][0] <= self.gaze_data[i][0]:
+                            output_data = ((event_t-timestamp_start)/1000.0, np.nan, np.nan, np.nan, 0,
+                                           np.nan, np.nan, np.nan, 0, np.nan, np.nan) + (np.nan,)*28
+                            self.datafile.write(format_string % output_data)
+                            self.datafile.write('\t%s\n' % (event_text))
+                            num_output_events += 1
+
+                else:
+                    self.datafile.write(format_string % self.convert_tobii_record(self.gaze_data[i], timestamp_start))
+                    self.datafile.write('\t\n')
 
             # flush remaining events
             if num_output_events < len(self.event_data):
                 for e_i in range(num_output_events, len(self.event_data)):
                     event_t = self.event_data[e_i][0]
                     event_text = self.event_data[e_i][1]
-                    
+
                     output_data = ((event_t-timestamp_start)/1000.0, np.nan, np.nan, np.nan, 0,
-                                   np.nan, np.nan, np.nan, 0, np.nan, np.nan)
+                                   np.nan, np.nan, np.nan, 0, np.nan, np.nan) + (np.nan,)*28
                     self.datafile.write(format_string % output_data)
                     self.datafile.write('\t%s\n' % (event_text))
         else:
             for i in range(len(self.gaze_data)):
                 self.datafile.write(format_string % self.convert_tobii_record(self.gaze_data[i], timestamp_start))
                 self.datafile.write('\n')
-            
-            self.datafile.write('TimeStamp\tEvent\n')
-            for e in self.event_data:
-                self.datafile.write('%.1f\t%s\n' % ((e[0]-timestamp_start)/1000.0, e[1]))
-        
+
+        # making this run regardless of embedding events - see comment above
+        # also adding separator between gaze data and event data
+        self.datafile.write('--\nTimeStamp\tEvent\n')
+        for e in self.event_data:
+            self.datafile.write('%.1f\t%s\n' % ((e[0]-timestamp_start)/1000.0, e[1]))
+
         self.datafile.write('Session End\n\n')
         self.datafile.flush()
 
@@ -767,16 +861,16 @@ class tobii_controller:
     def get_psychopy_pos(self, p):
         """
         Convert PsychoPy position to Tobii coordinate system.
-        
+
         :param p: Position (x, y)
         """
-        
+
         p = (p[0], 1-p[1]) #flip vert
         if self.win.units == 'norm':
             return (2*p[0]-1, 2*p[1]-1)
         elif self.win.units == 'height':
             return ((p[0]-0.5)*self.win.size[0]/self.win.size[1], p[1]-0.5)
-        
+
         p_pix = ((p[0]-0.5)*self.win.size[0], (p[1]-0.5)*self.win.size[1])
         if self.win.units == 'pix':
             return p_pix
@@ -793,10 +887,10 @@ class tobii_controller:
     def get_tobii_pos(self, p):
         """
         Convert Tobii position to PsychoPy coordinate system.
-        
+
         :param p: Position (x, y)
         """
-        
+
         if self.win.units == 'norm':
             gp = ((p[0]+1)/2, (p[1]+1)/2)
         elif self.win.units == 'height':
@@ -821,11 +915,11 @@ class tobii_controller:
         """
         Convert tobii data to output style.
         Usually, users don't have to call this method.
-        
+
         :param record: element of self.gaze_data.
         :param start_time: Tobii's timestamp when recording was started.
         """
-    
+
         lxy = self.get_psychopy_pos(record[1:3])
         rxy = self.get_psychopy_pos(record[5:7])
 
@@ -837,25 +931,26 @@ class tobii_controller:
             ave = lxy
         else:
             ave = ((lxy[0]+rxy[0])/2.0,(lxy[1]+rxy[1])/2.0)
-        
+
         return ((record[0]-start_time)/1000.0,
                 lxy[0], lxy[1], record[3], record[4],
                 rxy[0], rxy[1], record[7], record[8],
-                ave[0], ave[1])
+                ave[0], ave[1], record[0], record[9],
+                record[1], record[2], record[5], record[6]) + tuple(record[10:])
 
     def interpolate_gaze_data(self, record1, record2, t):
         """
         Interpolate gaze data between record1 and record2.
         Usually, users don't have to call this method.
-        
+
         :param record1: element of self.gaze_data.
         :param record2: element of self.gaze_data.
         :param t: timestamp to calculate interpolation.
         """
-        
+
         w1 = (record2[0]-t)/(record2[0]-record1[0])
         w2 = (t-record1[0])/(record2[0]-record1[0])
-        
+
         #left eye
         if record1[4] == 0 and record2[4] == 0:
             ldata = record1[1:5]
@@ -883,4 +978,3 @@ class tobii_controller:
                      1)
 
         return (t,) + ldata + rdata
-        
